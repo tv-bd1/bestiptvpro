@@ -6,7 +6,7 @@ https://bestiptv.bestiptv-pro.workers.dev/?url=http://stvlive.net:8080/tsports1/
 ########################## Sports ##########################
 
 #EXTINF:-1 tvg-id="tsportshd" tvg-name="T Sports" tvg-logo="https://images.seeklogo.com/logo-png/29/2/pakistan-super-league-psl-logo-png_seeklogo-298557.png" group-title="Sports",PSL LIVE
-https://bestiptv.bestiptv-pro.workers.dev/?url=http://103.144.89.251:8082/A.SPORTS.HD/tracks-v1a1/mono.m3u8?token=10dd5930dfeb1b746d23b46755434a12c624ce63-badb8cfb98d8a83206d776482e166f97-1774751982-1774741182
+https://bestiptv.bestiptv-pro.workers.dev/?url=http://198.195.239.50:8095/PTV-kutta/video.m3u8
 
 #EXTINF:-1 tvg-id="SONYSPORTS1HD" tvg-name="SONY SPORTS1 HD" tvg-logo="https://i.imgur.com/Ef27M7F.jpeg" group-title="Sports",Sony Sports2 HD
 https://autumn-shape-b04a.soft-disk-1347.workers.dev/?url=http://stvlive.net:8080/sonyten2/tracks-v1a1/mono.m3u8
