@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Ultimate IPTV Player PRO</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        :root { --bg: #000; --card: #121212; --accent: #00E5FF; --fav: #FFD700; --text: #fff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* PLAYER AREA */
+        .player-wrap { position: relative; width: 100%; background: #000; aspect-ratio: 16/9; flex-shrink: 0; overflow: hidden; }
+        video { width: 100%; height: 100%; object-fit: contain; z-index: 5; pointer-events: none; }
+
+        /* LOADER */
+        #loader { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); z-index: 200; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* অডিও ভিজ্যুয়ালাইজার */
+        #audioAnim { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; gap: 5px; background: #050505; z-index: 4; }
+        .v-bar { width: 8px; background: linear-gradient(to top, var(--accent), #fff); border-radius: 50px; animation: jump 0.6s infinite alternate; }
+        @keyframes jump { 0% { height: 10%; opacity: 0.3; } 100% { height: 80%; opacity: 1; } }
+
+        /* HUD FOR SWIPE */
+        #hud { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; z-index: 1000; display: none; text-align: center; pointer-events: none; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; }
+        #hud i { display: block; font-size: 3rem; margin-bottom: 5px; }
+
+        /* CONTROLS */
+        .controls-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); opacity: 0; visibility: hidden; transition: 0.3s; z-index: 100; display: flex; flex-direction: column; justify-content: flex-end; }
+        .controls-overlay.show { opacity: 1; visibility: visible; }
+        .bottom-bar { padding: 15px; background: linear-gradient(transparent, rgba(0,0,0,0.9)); display: flex; justify-content: space-between; align-items: center; }
+        .mini-btns, .right-side { display: flex; align-items: center; gap: 20px; }
+        .mini-btns i, .right-side i { font-size: 1.5rem; cursor: pointer; color: #fff; }
+
+        /* রোটেট কন্ডিশনাল বাটন */
+        #qualityBtn, #scaleBtn { display: none; }
+        @media screen and (orientation: landscape) { #qualityBtn, #scaleBtn { display: inline-block; } }
+
+        /* POP-UP MENU */
+        .pop-menu { position: absolute; bottom: 70px; background: rgba(15, 15, 15, 0.98); border: 1px solid #333; border-radius: 12px; display: none; flex-direction: column; z-index: 150; min-width: 150px; overflow: hidden; }
+        .pop-menu button { background: none; border: none; color: white; padding: 12px; cursor: pointer; border-bottom: 1px solid #222; text-align: left; font-size: 0.9rem; }
+        .pop-menu button:hover { background: var(--accent); color: #000; }
+
+        /* INFO AREA */
+        .info { padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; background: #0a0a0a; border-bottom: 1px solid #1a1a1a; flex-shrink: 0; }
+        .mini-logo { width: 45px; height: 45px; border-radius: 8px; object-fit: cover; border: 1px solid #333; }
+
+        /* TAB ACTIONS */
+        .actions { display: flex; padding: 10px 0; background: #000; border-bottom: 1px solid #1a1a1a; flex-shrink: 0; }
+        .actions div { flex: 1; text-align: center; font-size: 0.9rem; color: #888; cursor: pointer; transition: 0.2s; }
+        .actions div.active-tab { color: var(--accent); font-weight: bold; border-bottom: 2px solid var(--accent); padding-bottom: 5px; }
+
+        /* CHANNEL LIST - BALANCED PADDING */
+        .list { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 10px; 
+            padding-bottom: 70px; 
+            padding-bottom: calc(70px + env(safe-area-inset-bottom));
+            background: #000; 
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+        .list::-webkit-scrollbar { width: 3px; }
+        .list::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+
+        .row { display: flex; align-items: center; gap: 12px; background: var(--card); padding: 10px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #1a1a1a; cursor: pointer; transition: 0.2s; }
+        .row:active { transform: scale(0.97); }
+        .row.active { border-color: var(--accent); background: rgba(0, 229, 255, 0.08); }
+        .list-logo { width: 50px; height: 50px; border-radius: 6px; object-fit: cover; background: #111; }
+        .name { flex: 1; font-size: 0.95rem; color: #fff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .star-btn { font-size: 1.2rem; color: #333; transition: 0.2s; }
+        .star-btn.is-fav { color: var(--fav); }
+        .star-btn:active { transform: scale(1.3); }
+    </style>
+</head>
+<body>
+
+    <div class="player-wrap" id="playerArea" onclick="handlePlayerClick()">
+        <div id="loader"><div class="spinner"></div></div>
+        <div id="audioAnim"></div>
+        <div id="hud"><i id="hudIcon"></i><span id="hudValue"></span></div>
+        
+        <video id="video" playsinline crossorigin="anonymous"></video>
+        <div class="pop-menu" id="popMenu"></div>
+        
+        <div class="controls-overlay" id="controls">
+            <div class="bottom-bar">
+                <div class="mini-btns">
+                    <i class="fas fa-play" id="pp" onclick="togglePlay(event)"></i>
+                    <i class="fas fa-redo" onclick="location.reload()"></i>
+                </div>
+                <div class="right-side">
+                    <i class="fas fa-cog" id="qualityBtn" onclick="showQualityMenu(event)"></i>
+                    <i class="fas fa-sliders-h" id="scaleBtn" onclick="showScalingMenu(event)"></i>
+                    <i class="fas fa-expand" onclick="toggleFull(event)"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info">
+        <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+            <img id="currentLogo" class="mini-logo" src="https://i.imgur.com/8Qf6Y0L.png">
+            <div style="min-width:0;">
+                <h3 id="title" style="font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Select Channel</h3>
+                <small style="color:var(--accent);">LIVE STREAM</small>
+            </div>
+        </div>
+        <div id="count" style="font-size:0.85rem; opacity:0.8; flex-shrink:0;">0 CH</div>
+    </div>
+
+    <div class="actions">
+        <div id="allBtnTab" class="active-tab" onclick="switchTab('all', this)"><i class="fas fa-list"></i> All List</div>
+        <div id="favBtnTab" onclick="switchTab('fav', this)"><i class="fas fa-star"></i> My List</div>
+        <div onclick="window.open('https://t.me/rslivetv')"><i class="fab fa-telegram-plane"></i> Telegram</div>
+    </div>
+
+    <div class="list" id="list"></div>
+
+    <script>
+        // --- DOM refs ---
+        const video = document.getElementById('video');
+        const playerArea = document.getElementById('playerArea');
+        const popMenu = document.getElementById('popMenu');
+        const controls = document.getElementById('controls');
+        const listArea = document.getElementById('list');
+        const audioAnim = document.getElementById('audioAnim');
+        const loader = document.getElementById('loader');
+        const hud = document.getElementById('hud');
+        const hudIcon = document.getElementById('hudIcon');
+        const hudValue = document.getElementById('hudValue');
+
+        // --- State ---
+        let hls = new Hls();
+        let allChannels = [];
+        let isFavView = false;
+        let hideTimeout = null;
+        let brightness = 1;
+        let currentChannelUrl = '';
+
+        // --- Audio Visualizer bars ---
+        for (let i = 0; i < 20; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'v-bar';
+            bar.style.animationDelay = (Math.random() * 0.8) + 's';
+            audioAnim.appendChild(bar);
+        }
+
+        // --- Helpers ---
+        function getFavs() {
+            try {
+                return JSON.parse(localStorage.getItem('my_iptv_favs')) || [];
+            } catch { return []; }
+        }
+
+        function saveFavs(favs) {
+            localStorage.setItem('my_iptv_favs', JSON.stringify(favs));
+        }
+
+        // --- Player Controls ---
+        function handlePlayerClick() {
+            const isShowing = controls.classList.toggle('show');
+            if (!isShowing) {
+                popMenu.style.display = 'none';
+            }
+            clearTimeout(hideTimeout);
+            if (isShowing) {
+                hideTimeout = setTimeout(() => {
+                    controls.classList.remove('show');
+                    popMenu.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        function togglePlay(e) {
+            if (e) e.stopPropagation();
+            if (video.paused) {
+                video.play().catch(() => {});
+                document.getElementById('pp').className = 'fas fa-pause';
+                if (video.videoHeight === 0) audioAnim.style.display = 'flex';
+            } else {
+                video.pause();
+                document.getElementById('pp').className = 'fas fa-play';
+                audioAnim.style.display = 'none';
+            }
+        }
+
+        async function toggleFull(e) {
+            if (e) e.stopPropagation();
+            try {
+                if (!document.fullscreenElement) {
+                    await playerArea.requestFullscreen();
+                    video.style.objectFit = 'fill';
+                    if (screen.orientation?.lock) screen.orientation.lock('landscape').catch(() => {});
+                } else {
+                    await document.exitFullscreen();
+                    video.style.objectFit = 'contain';
+                }
+            } catch (_) {}
+        }
+
+        // --- Play Function ---
+        function play(url, name, logo) {
+            if (!url) return;
+            currentChannelUrl = url;
+            loader.style.display = 'flex';
+            audioAnim.style.display = 'none';
+            document.getElementById('title').innerText = name || 'Unknown';
+            document.getElementById('currentLogo').src = logo || 'https://i.imgur.com/8Qf6Y0L.png';
+
+            const isHls = url.includes('.m3u8') || url.includes('m3u8');
+            
+            if (isHls) {
+                if (hls) hls.destroy();
+                hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                });
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play().catch(() => {});
+                });
+                hls.on(Hls.Events.ERROR, (e, data) => {
+                    if (data.fatal) {
+                        hls.destroy();
+                        // fallback attempt
+                        video.src = url;
+                        video.play().catch(() => {});
+                    }
+                });
+            } else {
+                if (hls) hls.destroy();
+                video.src = url;
+                video.play().catch(() => {});
+            }
+
+            document.getElementById('pp').className = 'fas fa-pause';
+            // Update active row
+            document.querySelectorAll('.row').forEach(row => row.classList.remove('active'));
+            const rows = document.querySelectorAll('.row');
+            for (let row of rows) {
+                if (row._url === url) {
+                    row.classList.add('active');
+                    break;
+                }
+            }
+        }
+
+        // --- Render List (Optimized) ---
+        function render() {
+            const favs = getFavs();
+            const arr = isFavView ? favs : allChannels;
+            document.getElementById('count').innerText = arr.length + ' CH';
+
+            const fragment = document.createDocumentFragment();
+            arr.forEach(ch => {
+                const isFav = favs.some(f => f.url === ch.url);
+                const isActive = (currentChannelUrl === ch.url);
+                const row = document.createElement('div');
+                row.className = `row ${isActive ? 'active' : ''}`;
+                row._url = ch.url;
+                row.innerHTML = `
+                    <img src="${ch.logo || 'https://i.imgur.com/8Qf6Y0L.png'}" class="list-logo" onerror="this.src='https://i.imgur.com/8Qf6Y0L.png'">
+                    <div class="name">${ch.name || 'Channel'}</div>
+                    <i class="fas fa-star star-btn ${isFav ? 'is-fav' : ''}" data-url="${ch.url}" data-name="${ch.name || ''}" data-logo="${ch.logo || ''}"></i>
+                `;
+                row.onclick = () => play(ch.url, ch.name, ch.logo);
+                
+                const star = row.querySelector('.star-btn');
+                star.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFav(ch, star);
+                };
+                fragment.appendChild(row);
+            });
+            listArea.innerHTML = '';
+            listArea.appendChild(fragment);
+        }
+
+        // --- Toggle Favorite (Optimized) ---
+        function toggleFav(ch, starEl) {
+            let favs = getFavs();
+            const idx = favs.findIndex(f => f.url === ch.url);
+            if (idx > -1) {
+                favs.splice(idx, 1);
+                if (starEl) starEl.classList.remove('is-fav');
+            } else {
+                favs.push({ url: ch.url, name: ch.name, logo: ch.logo });
+                if (starEl) starEl.classList.add('is-fav');
+            }
+            saveFavs(favs);
+            // If in fav view, re-render; else just update star states
+            if (isFavView) {
+                render();
+            } else {
+                // update all star states in the current list
+                const allStars = listArea.querySelectorAll('.star-btn');
+                allStars.forEach(s => {
+                    const url = s.dataset.url;
+                    const isFav = favs.some(f => f.url === url);
+                    s.classList.toggle('is-fav', isFav);
+                });
+            }
+        }
+
+        // --- Tab Switching ---
+        function switchTab(type, el) {
+            document.querySelectorAll('.actions div').forEach(d => d.classList.remove('active-tab'));
+            el.classList.add('active-tab');
+            isFavView = (type === 'fav');
+            render();
+        }
+
+        // --- Quality & Scaling Menus ---
+        function showScalingMenu(e) {
+            e.stopPropagation();
+            popMenu.style.right = '15px';
+            popMenu.style.left = 'auto';
+            popMenu.innerHTML = `
+                <button onclick="setScaling('contain')">Fit Screen</button>
+                <button onclick="setScaling('fill')">Zoom Fill</button>
+                <button onclick="setScaling('cover')">Stretch 16:9</button>
+            `;
+            popMenu.style.display = (popMenu.style.display !== 'flex') ? 'flex' : 'none';
+        }
+
+        function showQualityMenu(e) {
+            e.stopPropagation();
+            popMenu.style.right = '60px';
+            popMenu.style.left = 'auto';
+            let html = `<button onclick="setQuality(-1)">Auto Quality</button>`;
+            if (hls && hls.levels) {
+                hls.levels.forEach((l, i) => {
+                    html += `<button onclick="setQuality(${i})">${l.height || i}p</button>`;
+                });
+            } else {
+                html += `<button disabled>No levels</button>`;
+            }
+            popMenu.innerHTML = html;
+            popMenu.style.display = (popMenu.style.display !== 'flex') ? 'flex' : 'none';
+        }
+
+        function setScaling(t) {
+            video.style.objectFit = t;
+            popMenu.style.display = 'none';
+        }
+
+        function setQuality(i) {
+            if (hls) hls.currentLevel = i;
+            popMenu.style.display = 'none';
+        }
+
+        // --- Video Events ---
+        video.onwaiting = () => { loader.style.display = 'flex'; };
+        video.onplaying = () => {
+            loader.style.display = 'none';
+            if (video.videoHeight === 0 && !video.paused) {
+                audioAnim.style.display = 'flex';
+            } else {
+                audioAnim.style.display = 'none';
+            }
+        };
+        video.onpause = () => {
+            audioAnim.style.display = 'none';
+        };
+
+        // --- Swipe Controls (Improved) ---
+        let swipeStartY = 0;
+        let swipeStartVal = 0;
+        let swipeIsLeft = false;
+
+        playerArea.addEventListener('touchstart', (e) => {
+            if (!document.fullscreenElement) return;
+            const touch = e.touches[0];
+            swipeStartY = touch.clientY;
+            swipeIsLeft = touch.clientX < playerArea.clientWidth / 2;
+            swipeStartVal = swipeIsLeft ? brightness : video.volume;
+        }, { passive: true });
+
+        playerArea.addEventListener('touchmove', (e) => {
+            if (!document.fullscreenElement) return;
+            e.preventDefault();
+            const delta = (swipeStartY - e.touches[0].clientY) / 150;
+            hud.style.display = 'block';
+
+            if (swipeIsLeft) {
+                brightness = Math.min(Math.max(swipeStartVal + delta, 0.3), 1.8);
+                playerArea.style.filter = `brightness(${brightness})`;
+                hudIcon.className = 'fas fa-sun';
+                hudValue.innerText = Math.round(brightness * 50) + '%';
+            } else {
+                let vol = Math.min(Math.max(swipeStartVal + delta, 0), 1);
+                video.volume = vol;
+                hudIcon.className = vol === 0 ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+                hudValue.innerText = Math.round(vol * 100) + '%';
+            }
+        }, { passive: false });
+
+        playerArea.addEventListener('touchend', () => {
+            setTimeout(() => { hud.style.display = 'none'; }, 800);
+        }, { passive: true });
+
+        // --- Load Playlist ---
+        const playlistUrl = new URLSearchParams(location.search).get('playlist');
+        if (playlistUrl) {
+            fetch(playlistUrl)
+                .then(r => r.text())
+                .then(data => {
+                    const lines = data.split('\n');
+                    let current = {};
+                    allChannels = [];
+                    for (let line of lines) {
+                        line = line.trim();
+                        if (line.startsWith('#EXTINF')) {
+                            const nameMatch = line.match(/,([^,]*)$/);
+                            const logoMatch = line.match(/tvg-logo="([^"]*)"/);
+                            current = {
+                                name: nameMatch ? nameMatch[1].trim() : 'Channel',
+                                logo: logoMatch ? logoMatch[1] : 'https://i.imgur.com/8Qf6Y0L.png'
+                            };
+                        } else if (line.startsWith('http://') || line.startsWith('https://')) {
+                            if (current.url) {
+                                allChannels.push({ ...current, url: line });
+                            } else {
+                                allChannels.push({ ...current, url: line });
+                            }
+                            current = {};
+                        }
+                    }
+                    // Filter out any invalid entries
+                    allChannels = allChannels.filter(ch => ch.url);
+                    render();
+                    if (allChannels.length > 0) {
+                        play(allChannels[0].url, allChannels[0].name, allChannels[0].logo);
+                    }
+                })
+                .catch(err => {
+                    console.warn('Playlist load error:', err);
+                    listArea.innerHTML = '<div style="color:#888;text-align:center;padding:40px;">⚠️ Failed to load playlist</div>';
+                });
+        } else {
+            listArea.innerHTML = '<div style="color:#888;text-align:center;padding:40px;">📺 Add ?playlist=URL to load</div>';
+        }
+
+        // --- Fullscreen change event ---
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                video.style.objectFit = 'contain';
+            }
+        });
+
+        // Expose functions to global scope
+        window.handlePlayerClick = handlePlayerClick;
+        window.togglePlay = togglePlay;
+        window.toggleFull = toggleFull;
+        window.switchTab = switchTab;
+        window.showScalingMenu = showScalingMenu;
+        window.showQualityMenu = showQualityMenu;
+        window.setScaling = setScaling;
+        window.setQuality = setQuality;
+        window.play = play;
+        window.render = render;
+        window.toggleFav = toggleFav;
+    </script>
+    <script src="https://pl26377172.effectivegatecpm.com/d7/8b/93/d78b9343b29d8ff89244b094b359e591.js"></script>
+</body>
+</html>
