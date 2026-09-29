@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Best IPTV Pro — Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { background: #0f172a; font-family: sans-serif; }
+  .spin { border:3px solid #1e293b; border-top:3px solid #10b981; border-radius:50%; width:34px; height:34px; animation:sp 1s linear infinite; }
+  @keyframes sp { 100% { transform:rotate(360deg); } }
+</style>
+</head>
+<body class="text-white p-3">
+
+<!-- লগইন -->
+<div id="loginBox" class="fixed inset-0 bg-slate-950 flex items-center justify-center p-4 z-50">
+  <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 max-w-sm w-full text-center space-y-4">
+    <div class="text-4xl">📺</div>
+    <h2 class="text-xl font-bold text-emerald-400">Best IPTV Pro Admin</h2>
+    <input type="password" id="pw" placeholder="Password" class="w-full p-3 bg-slate-800 rounded-xl text-center border border-slate-700">
+    <p id="pwErr" class="text-red-400 text-xs hidden">ভুল পাসওয়ার্ড</p>
+    <button onclick="doLogin()" class="w-full bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl">Login</button>
+  </div>
+</div>
+
+<!-- টোকেন পপআপ -->
+<div id="tokenBox" class="fixed inset-0 bg-slate-950 flex items-center justify-center p-4 z-40 hidden">
+  <div class="bg-slate-900 p-6 rounded-2xl border-2 border-emerald-500/40 max-w-md w-full space-y-3">
+    <div class="text-center">
+      <div class="text-3xl mb-1">🔑</div>
+      <h3 class="font-bold text-emerald-400">GitHub Token দিন</h3>
+      <p class="text-xs text-slate-400 mt-1">শুধু একবার লাগবে — ব্রাউজার মনে রাখবে</p>
+    </div>
+    <div class="bg-slate-800/60 p-3 rounded-xl text-xs text-slate-300 space-y-1">
+      <p>1. github.com/settings/personal-access-tokens</p>
+      <p>2. Generate new token</p>
+      <p>3. Repo: <b class="text-emerald-400">tv-bd1/bestiptvpro</b></p>
+      <p>4. Contents: <b class="text-emerald-400">Read and write</b></p>
+    </div>
+    <input type="password" id="tok" placeholder="github_pat_..." class="w-full p-3 bg-slate-800 rounded-xl text-xs font-mono border border-slate-700">
+    <p id="tokErr" class="text-red-400 text-xs hidden text-center"></p>
+    <p id="tokOk" class="text-yellow-400 text-xs hidden text-center">⏳ যাচাই করছি...</p>
+    <button onclick="saveToken()" id="tokBtn" class="w-full bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl">Save & Verify</button>
+  </div>
+</div>
+
+<!-- মেইন প্যানেল -->
+<div id="panel" class="max-w-6xl mx-auto space-y-3 hidden">
+  <div class="flex justify-between items-center border-b border-slate-800 pb-3 flex-wrap gap-2">
+    <div>
+      <h1 class="text-xl font-bold text-emerald-400">📺 Best IPTV Pro</h1>
+      <p id="status" class="text-xs text-slate-500">চালু হচ্ছে...</p>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+      <span id="badge" class="text-xs px-3 py-1 rounded-full bg-slate-800">🔑 চেক করছি...</span>
+      <a href="index.html" class="bg-slate-800 px-3 py-2 rounded-xl text-purple-400 text-xs">🏠 Home</a>
+      <button onclick="test()" class="bg-slate-800 px-3 py-2 rounded-xl text-yellow-400 text-xs">🔑 Test</button>
+      <button onclick="changeToken()" class="bg-slate-800 px-3 py-2 rounded-xl text-blue-400 text-xs">🔁 Token</button>
+      <button onclick="toggleSettings()" class="bg-slate-800 px-3 py-2 rounded-xl text-emerald-400 text-xs">⚙️ Settings</button>
+    </div>
+  </div>
+
+  <div id="debug" class="bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs font-mono hidden">
+    <div class="flex justify-between mb-1">
+      <span class="text-yellow-400 font-bold">🔍 Debug</span>
+      <button onclick="document.getElementById('debug').classList.add('hidden')" class="text-slate-500">✖</button>
+    </div>
+    <div id="dbg" class="space-y-1 text-slate-300 break-all"></div>
+  </div>
+
+  <div id="settingsBox" class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2 hidden">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+      <h3 class="text-emerald-400 font-bold">🌐 Settings</h3>
+      <select id="maint" class="bg-slate-800 px-2 py-1 rounded text-emerald-400 text-xs">
+        <option value="OFF">Maintenance OFF</option>
+        <option value="ON">Maintenance ON</option>
+      </select>
+    </div>
+    <input type="text" id="notice" placeholder="Notice" class="w-full p-2 bg-slate-800 rounded-xl text-sm">
+    <input type="url" id="telegram" placeholder="Telegram URL" class="w-full p-2 bg-slate-800 rounded-xl text-sm">
+    <input type="text" id="version" placeholder="Version" class="w-full p-2 bg-slate-800 rounded-xl text-sm">
+    <input type="url" id="apk" placeholder="APK Link" class="w-full p-2 bg-slate-800 rounded-xl text-sm">
+    <textarea id="adBanner" rows="2" placeholder="Banner Ad Code" class="w-full p-2 bg-slate-800 rounded-xl text-xs font-mono"></textarea>
+    <textarea id="adPop" rows="2" placeholder="Popunder Ad Code" class="w-full p-2 bg-slate-800 rounded-xl text-xs font-mono"></textarea>
+    <div class="flex justify-end gap-2">
+      <button onclick="toggleSettings()" class="bg-slate-700 px-3 py-2 rounded-xl text-xs">Close</button>
+      <button onclick="saveSettings()" id="saveSetBtn" class="bg-emerald-500 text-slate-950 font-bold px-3 py-2 rounded-xl text-xs">💾 Save</button>
+    </div>
+  </div>
+
+  <div id="mainArea" class="space-y-3">
+    <div class="flex gap-2 bg-slate-900 p-2 rounded-xl border border-slate-800">
+      <button onclick="setList('All.m3u')" id="t-All" class="flex-1 py-2 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950">📺 All</button>
+      <button onclick="setList('Sports.m3u')" id="t-Sports" class="flex-1 py-2 rounded-lg text-xs font-bold bg-slate-800">⚽ Sports</button>
+      <button onclick="setList('FMRadio.m3u')" id="t-FMRadio" class="flex-1 py-2 rounded-lg text-xs font-bold bg-slate-800">📻 FM Radio</button>
+    </div>
+
+    <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 flex gap-2 flex-wrap">
+      <input type="text" id="search" oninput="render()" placeholder="🔍 Search..." class="flex-1 min-w-[150px] px-3 py-2 bg-slate-800 rounded-xl text-sm">
+      <span id="count" class="bg-slate-800 px-3 py-2 rounded-xl text-xs">Total: 0</span>
+      <button onclick="loadList()" class="bg-slate-800 px-3 py-2 rounded-xl text-xs">🔄 Refresh</button>
+      <button onclick="openAdd()" class="bg-emerald-500 text-slate-950 font-bold px-3 py-2 rounded-xl text-xs">➕ Add</button>
+    </div>
+
+    <div id="list" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[60vh] overflow-y-auto"></div>
+  </div>
+</div>
+
+<div id="addModal" class="fixed inset-0 bg-black/80 z-50 items-center justify-center p-4 hidden">
+  <div class="bg-slate-900 p-5 rounded-xl max-w-md w-full space-y-2">
+    <h3 id="mTitle" class="font-bold text-emerald-400">➕ Add Channel</h3>
+    <form id="chForm" class="space-y-2">
+      <input type="hidden" id="editIdx">
+      <input type="text" id="cName" placeholder="Channel Name" required class="w-full p-3 bg-slate-800 rounded-xl text-sm">
+      <input type="url" id="cLogo" placeholder="Logo URL" class="w-full p-3 bg-slate-800 rounded-xl text-sm">
+      <input type="url" id="cUrl" placeholder="Stream URL" required class="w-full p-3 bg-slate-800 rounded-xl text-sm">
+      <input type="text" id="cGroup" placeholder="Group (optional)" class="w-full p-3 bg-slate-800 rounded-xl text-sm">
+      <div class="flex gap-2">
+        <button type="submit" class="flex-1 bg-emerald-500 text-slate-950 font-bold py-2 rounded-xl text-sm">Save</button>
+        <button type="button" onclick="closeAdd()" class="flex-1 bg-slate-700 py-2 rounded-xl text-sm">Cancel</button>
+      </div>
+    </form>
+    <p id="mStatus" class="text-center text-xs"></p>
+  </div>
+</div>
+
+<div id="toast" class="fixed bottom-5 right-5 bg-slate-900 border border-slate-700 px-4 py-2 rounded-xl text-xs hidden z-50"></div>
+
+<script>
+const OWNER = "tv-bd1";
+const REPO  = "bestiptvpro";
+const LISTS = ["All.m3u", "Sports.m3u", "FMRadio.m3u"];
+const PW    = "rsbd00";
+const TKEY  = "bip_token";
+
+let BRANCH = "main";
+let TOKEN  = "";
+let curList = "All.m3u";
+let chans = [];
+let listSha = "", setSha = "";
+let settings = { notice:"", telegram:"", version:"", updateLink:"", maintenance:"OFF", adCodeBanner:"", adCodePopunder:"" };
+
+const enc = s => { try { return btoa(unescape(encodeURIComponent(s))); } catch(e) { return btoa(s); } };
+const dec = b => { try { return decodeURIComponent(escape(atob((b||"").replace(/\s/g,'')))); } catch(e) { return atob((b||"").replace(/\s/g,'')); } };
+const esc = s => !s ? '' : String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+
+function toast(m, c) {
+  const t = document.getElementById('toast');
+  t.className = `fixed bottom-5 right-5 bg-slate-900 border border-slate-700 px-4 py-2 rounded-xl text-xs font-bold z-50 ${c||'text-emerald-400'}`;
+  t.innerText = m; t.classList.remove('hidden');
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.add('hidden'), 3500);
+}
+function setStatus(m, c) { const e = document.getElementById('status'); e.innerText = m; e.className = `text-xs ${c||'text-slate-500'}`; }
+function setBadge(ok, m) { const e = document.getElementById('badge'); e.innerText = m; e.className = `text-xs px-3 py-1 rounded-full ${ok ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`; }
+
+function parseM3U(txt) {
+  const out = []; let cur = null;
+  for (const l of (txt||"").split(/\r?\n/)) {
+    const line = l.trim(); if (!line) continue;
+    if (line.startsWith('#EXTINF')) {
+      const nm = line.match(/,(.+)$/), lg = line.match(/tvg-logo="([^"]*)"/i), gp = line.match(/group-title="([^"]*)"/i);
+      cur = { name: nm?nm[1].trim():"Unnamed", image: lg?lg[1]:"", group: gp?gp[1]:"", url: "" };
+    } else if (line.startsWith('#EXTGRP:')) {
+      if (cur) cur.group = line.replace('#EXTGRP:','').trim();
+    } else if (!line.startsWith('#')) {
+      if (cur) { cur.url = line; out.push(cur); cur = null; }
+    }
+  }
+  return out;
+}
+function buildM3U(list) {
+  let o = '#EXTM3U\n';
+  for (const c of list) {
+    let i = '#EXTINF:-1';
+    if (c.image) i += ` tvg-logo="${c.image}"`;
+    if (c.group) i += ` group-title="${c.group}"`;
+    i += `,${c.name}`;
+    o += i + '\n' + c.url + '\n';
+  }
+  return o;
+}
+
+async function ghGet(path) {
+  if (!TOKEN) throw new Error("টোকেন সেট নেই");
+  const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}?ref=${BRANCH}&t=${Date.now()}`;
+  const r = await fetch(url, {
+    headers: { 'Authorization': `token ${TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' }
+  });
+  if (r.status === 404) return null;
+  if (r.status === 401) throw new Error("401: টোকেন ভুল");
+  if (r.status === 403) throw new Error("403: Permission নেই");
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(r.status + ": " + (e.message||'GitHub error')); }
+  return r.json();
+}
+
+async function ghPut(path, content, sha, isM3U) {
+  if (!TOKEN) throw new Error("টোকেন সেট নেই");
+  const b64 = isM3U ? enc(content) : enc(JSON.stringify(content, null, 2));
+  const body = { message: `Update ${path} - ${new Date().toISOString()}`, content: b64, branch: BRANCH };
+  if (sha) body.sha = sha;
+  const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`, {
+    method: 'PUT',
+    headers: { 'Authorization': `token ${TOKEN}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(()=>({}));
+    if (r.status === 401) throw new Error("401: Bad credentials");
+    if (r.status === 403) throw new Error("403: Permission denied");
+    if (r.status === 409) throw new Error("409: Conflict");
+    if (r.status === 422) throw new Error("422: SHA mismatch");
+    throw new Error(r.status + ": " + (e.message||'GitHub error'));
+  }
+  const j = await r.json();
+  return j.content.sha;
+}
+
+document.getElementById('pw').addEventListener('keypress', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('tok').addEventListener('keypress', e => { if (e.key === 'Enter') saveToken(); });
+
+function doLogin() {
+  if (document.getElementById('pw').value !== PW) {
+    document.getElementById('pwErr').classList.remove('hidden');
+    setTimeout(() => document.getElementById('pwErr').classList.add('hidden'), 1500);
+    return;
+  }
+  document.getElementById('loginBox').classList.add('hidden');
+  document.getElementById('panel').classList.remove('hidden');
+  const saved = localStorage.getItem(TKEY);
+  if (saved && saved.length > 30) {
+    TOKEN = saved;
+    setBadge(true, '🔑 লোড হয়েছে');
+    start();
+  } else {
+    document.getElementById('tokenBox').classList.remove('hidden');
+    setStatus('🔑 টোকেন প্রয়োজন', 'text-yellow-400');
+  }
+}
+
+async function saveToken() {
+  const v = document.getElementById('tok').value.trim();
+  const err = document.getElementById('tokErr'), ok = document.getElementById('tokOk'), btn = document.getElementById('tokBtn');
+  err.classList.add('hidden'); ok.classList.add('hidden');
+  if (!v || v.length < 30) { err.innerText = '❌ টোকেন খালি বা ছোট'; err.classList.remove('hidden'); return; }
+  if (!v.startsWith('github_pat_') && !v.startsWith('ghp_')) { err.innerText = '❌ github_pat_ দিয়ে শুরু হতে হবে'; err.classList.remove('hidden'); return; }
+  btn.innerText = '⏳ যাচাই...'; btn.disabled = true;
+  ok.innerText = '⏳ GitHub-এ যাচাই করছি...'; ok.classList.remove('hidden');
+  try {
+    const r1 = await fetch('https://api.github.com/user', { headers: { 'Authorization': `token ${v}` } });
+    if (!r1.ok) throw new Error('টোকেন ভুল বা এক্সপায়ার্ড');
+    const u = await r1.json();
+    const r2 = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}`, { headers: { 'Authorization': `token ${v}` } });
+    if (!r2.ok) throw new Error('এই রিপোতে অ্যাক্সেস নেই');
+    const repo = await r2.json();
+    BRANCH = repo.default_branch || 'main';
+    TOKEN = v;
+    localStorage.setItem(TKEY, v);
+    ok.innerText = '✅ সফল! User: ' + u.login;
+    ok.className = 'text-emerald-400 text-xs text-center';
+    setTimeout(() => {
+      document.getElementById('tokenBox').classList.add('hidden');
+      setBadge(true, '🔑 Token OK');
+      start();
+    }, 700);
+  } catch(e) {
+    btn.innerText = 'Save & Verify'; btn.disabled = false;
+    ok.classList.add('hidden');
+    err.innerText = '❌ ' + e.message;
+    err.classList.remove('hidden');
+  }
+}
+
+function changeToken() {
+  if (confirm('টোকেন পরিবর্তন করবেন?')) {
+    localStorage.removeItem(TKEY);
+    location.reload();
+  }
+}
+
+async function test() {
+  document.getElementById('debug').classList.remove('hidden');
+  document.getElementById('dbg').innerHTML = '<div class="text-yellow-400">⏳ টেস্ট...</div>';
+  let h = '';
+  if (!TOKEN) { document.getElementById('dbg').innerHTML = '<div class="text-red-400">টোকেন নেই</div>'; return; }
+  h += `<div>Token: ${TOKEN.substring(0,18)}...${TOKEN.slice(-6)} (len=${TOKEN.length})</div>`;
+  h += `<div>Repo: ${OWNER}/${REPO}</div><div>Branch: ${BRANCH}</div><hr class="border-slate-700 my-1">`;
+  try {
+    const r = await fetch('https://api.github.com/user', { headers: { 'Authorization': `token ${TOKEN}` } });
+    if (r.ok) { const u = await r.json(); h += `<div class="text-emerald-400">✅ Auth OK — ${u.login}</div>`; }
+    else { const e = await r.json().catch(()=>({})); h += `<div class="text-red-400">❌ Auth — ${e.message||r.status}</div>`; setBadge(false, '🔑 Invalid'); }
+  } catch(e) { h += `<div class="text-red-400">❌ ${e.message}</div>`; }
+  try {
+    const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}`, { headers: { 'Authorization': `token ${TOKEN}` } });
+    if (r.ok) { const p = await r.json(); h += `<div class="text-emerald-400">✅ Repo OK — ${p.default_branch}</div>`; }
+    else { const e = await r.json().catch(()=>({})); h += `<div class="text-red-400">❌ Repo — ${e.message||r.status}</div>`; }
+  } catch(e) { h += `<div class="text-red-400">❌ ${e.message}</div>`; }
+  try {
+    const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/All.m3u`, { headers: { 'Authorization': `token ${TOKEN}` } });
+    if (r.ok) { const f = await r.json(); h += `<div class="text-emerald-400">✅ All.m3u OK (${f.size}b)</div>`; setBadge(true, '🔑 Token OK'); }
+    else { const e = await r.json().catch(()=>({})); h += `<div class="text-red-400">❌ All.m3u — ${e.message||r.status}</div>`; }
+  } catch(e) { h += `<div class="text-red-400">❌ ${e.message}</div>`; }
+  document.getElementById('dbg').innerHTML = h;
+}
+
+async function start() {
+  setStatus('লোড হচ্ছে...', 'text-yellow-400');
+  await loadList();
+  await loadSettings();
+}
+
+async function loadList() {
+  const el = document.getElementById('list');
+  el.innerHTML = '<div class="col-span-full flex justify-center py-12"><div class="spin"></div></div>';
+  chans = [];
+  try {
+    const f = await ghGet(curList);
+    if (!f) { el.innerHTML = `<p class="text-yellow-400 col-span-full text-center py-8">⚠️ ${curList} পাওয়া যায়নি</p>`; setStatus('❌ ' + curList, 'text-red-400'); return; }
+    listSha = f.sha;
+    chans = parseM3U(dec(f.content));
+    setStatus(`✅ ${curList} — ${chans.length} টি চ্যানেল`, 'text-emerald-400');
+    setBadge(true, '🔑 Token OK');
+    render();
+  } catch(e) {
+    setStatus('❌ ' + e.message, 'text-red-400');
+    if (e.message.includes('401')) setBadge(false, '🔑 Invalid');
+    el.innerHTML = `<div class="col-span-full text-center py-8 space-y-2">
+      <p class="text-red-400">${esc(e.message)}</p>
+      <button onclick="test()" class="bg-yellow-500 text-slate-950 font-bold px-3 py-2 rounded-xl text-xs">🔑 Test</button>
+      <button onclick="changeToken()" class="bg-blue-500 text-slate-950 font-bold px-3 py-2 rounded-xl text-xs">🔁 Token</button>
+    </div>`;
+  }
+}
+
+function render() {
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const filtered = chans.filter(c => (c.name||'').toLowerCase().includes(q));
+  document.getElementById('count').innerText = 'Total: ' + filtered.length;
+  const el = document.getElementById('list');
+  if (!filtered.length) { el.innerHTML = '<p class="text-slate-500 col-span-full text-center py-8">📭 চ্যানেল নেই</p>'; return; }
+  el.innerHTML = filtered.map(c => {
+    const i = chans.indexOf(c);
+    return `<div class="bg-slate-900 rounded-xl border border-slate-800 p-2.5 text-center">
+      <img src="${esc(c.image||'https://i.imgur.com/8Km9tLL.png')}" class="w-14 h-14 rounded-full mx-auto mb-1 bg-slate-800" onerror="this.src='https://i.imgur.com/8Km9tLL.png'">
+      <h4 class="font-bold text-xs truncate">${esc(c.name)}</h4>
+      <p class="text-[9px] text-slate-400 truncate">${esc(c.url)}</p>
+      <div class="flex gap-1 mt-2">
+        <button onclick="edit(${i})" class="flex-1 bg-yellow-500/20 text-yellow-300 text-[10px] py-1 rounded">✏️</button>
+        <button onclick="del(${i})" class="flex-1 bg-red-500/20 text-red-300 text-[10px] py-1 rounded">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setList(n) {
+  curList = n;
+  for (const p of LISTS) {
+    const b = document.getElementById('t-' + p.replace('.m3u',''));
+    if (b) b.className = p === n ? 'flex-1 py-2 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950' : 'flex-1 py-2 rounded-lg text-xs font-bold bg-slate-800';
+  }
+  loadList();
+}
+
+async function saveList(list) {
+  try {
+    const latest = await ghGet(curList);
+    const sha = latest ? latest.sha : listSha;
+    listSha = await ghPut(curList, buildM3U(list), sha, true);
+    return true;
+  } catch(e) { toast('❌ ' + e.message, 'text-red-400'); return false; }
+}
+
+function openAdd() { document.getElementById('addModal').classList.remove('hidden'); document.getElementById('addModal').classList.add('flex'); }
+function closeAdd() { document.getElementById('addModal').classList.add('hidden'); document.getElementById('addModal').classList.remove('flex'); document.getElementById('chForm').reset(); document.getElementById('editIdx').value = ''; }
+function edit(i) {
+  const c = chans[i];
+  document.getElementById('mTitle').innerText = '✏️ Edit Channel';
+  document.getElementById('editIdx').value = i;
+  document.getElementById('cName').value = c.name || '';
+  document.getElementById('cLogo').value = c.image || '';
+  document.getElementById('cUrl').value = c.url || '';
+  document.getElementById('cGroup').value = c.group || '';
+  openAdd();
+}
+async function del(i) {
+  if (!confirm('ডিলিট করবেন?')) return;
+  try {
+    const latest = await ghGet(curList);
+    const list = parseM3U(dec(latest.content));
+    list.splice(i, 1);
+    listSha = await ghPut(curList, buildM3U(list), latest.sha, true);
+    chans = list; render(); toast('✅ ডিলিট হয়েছে');
+  } catch(e) { toast('❌ ' + e.message, 'text-red-400'); }
+}
+document.getElementById('chForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const idx = document.getElementById('editIdx').value;
+  const ch = {
+    name: document.getElementById('cName').value.trim(),
+    image: document.getElementById('cLogo').value.trim(),
+    group: document.getElementById('cGroup').value.trim(),
+    url: document.getElementById('cUrl').value.trim()
+  };
+  if (idx === '') chans.unshift(ch); else chans[idx] = ch;
+  const st = document.getElementById('mStatus');
+  st.innerText = '⏳ সেভ...'; st.className = 'text-yellow-400 text-center text-xs';
+  if (await saveList(chans)) {
+    st.innerText = '✅ সেভ হয়েছে'; st.className = 'text-emerald-400 text-center text-xs';
+    setTimeout(() => { closeAdd(); render(); st.innerText = ''; }, 700);
+  } else {
+    st.innerText = '❌ ব্যর্থ'; st.className = 'text-red-400 text-center text-xs';
+  }
+});
+
+function toggleSettings() {
+  document.getElementById('settingsBox').classList.toggle('hidden');
+  document.getElementById('mainArea').classList.toggle('hidden');
+}
+async function loadSettings() {
+  try {
+    const f = await ghGet('settings.json');
+    if (f) { setSha = f.sha; settings = { ...settings, ...JSON.parse(dec(f.content)) }; }
+  } catch(e) {}
+  document.getElementById('notice').value = settings.notice || '';
+  document.getElementById('telegram').value = settings.telegram || '';
+  document.getElementById('version').value = settings.version || '';
+  document.getElementById('apk').value = settings.updateLink || '';
+  document.getElementById('maint').value = settings.maintenance || 'OFF';
+  document.getElementById('adBanner').value = settings.adCodeBanner || '';
+  document.getElementById('adPop').value = settings.adCodePopunder || '';
+}
+async function saveSettings() {
+  const btn = document.getElementById('saveSetBtn');
+  btn.innerText = '⏳...'; btn.disabled = true;
+  settings = {
+    notice: document.getElementById('notice').value,
+    telegram: document.getElementById('telegram').value,
+    version: document.getElementById('version').value,
+    updateLink: document.getElementById('apk').value,
+    maintenance: document.getElementById('maint').value,
+    adCodeBanner: document.getElementById('adBanner').value,
+    adCodePopunder: document.getElementById('adPop').value
+  };
+  try {
+    const latest = await ghGet('settings.json');
+    setSha = await ghPut('settings.json', settings, latest ? latest.sha : null, false);
+    toast('✅ Settings সেভ হয়েছে');
+  } catch(e) { toast('❌ ' + e.message, 'text-red-400'); }
+  btn.innerText = '💾 Save'; btn.disabled = false;
+}
+</script>
+</body>
+</html>
